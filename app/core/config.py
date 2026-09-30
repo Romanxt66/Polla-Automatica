@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     results_provider: str = "fake"  # fake | api_football
     api_football_key: str = ""
+    scheduler_enabled: bool = False
 
 
 settings = Settings()

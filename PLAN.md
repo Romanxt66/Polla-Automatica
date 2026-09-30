@@ -112,7 +112,10 @@ Cada tarea = una rama = un PR.
 
 ### B6. `feat/b-scheduler`
 - `app/jobs/scheduler.py`: APScheduler que corre `sync_fixtures` (1 vez al día) y `settle_matches` (cada 5 min, solo si hay partidos en ventana de juego).
-- Se engancha al arranque de la app con un hook expuesto por `main.py`. **Pídele a A que lo conecte** (2 líneas).
+- Se engancha al arranque de la app con un hook que **ya está en `main.py`** (A7). El módulo `app/jobs/scheduler.py` debe exponer dos funciones sin argumentos, síncronas:
+  - `start_scheduler() -> None`: crea y arranca el APScheduler con los jobs.
+  - `stop_scheduler() -> None`: lo detiene limpiamente.
+  - Solo se invoca si `SCHEDULER_ENABLED=true` en `.env` (por defecto `false`).
 
 ### B7. `feat/b-api-football` (cuando haya llave)
 - `app/providers/api_football.py`: implementa `ResultsProvider`.
