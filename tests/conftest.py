@@ -1,3 +1,8 @@
+import os
+
+# Los tests nunca deben tocar una base real: se fuerza antes de importar la app.
+os.environ["DATABASE_URL"] = "sqlite://"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
