@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     results_provider: str = "fake"  # fake | api_football
     api_football_key: str = ""
+    api_football_season: int | None = None  # vacío = se deduce por competición
     scheduler_enabled: bool = False
 
     @model_validator(mode="after")

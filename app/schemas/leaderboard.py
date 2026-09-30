@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class RankingEntry(BaseModel):
+class LeaderboardEntry(BaseModel):
     rank: int
     user_id: int
     username: str
