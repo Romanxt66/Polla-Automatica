@@ -80,6 +80,8 @@ def test_get_fixtures_maps_and_sends_league_and_season():
     assert fixtures[0].home_team == "Nacional" and fixtures[0].competition_code == "BETPLAY"
     assert fixtures[0].kickoff_at == datetime(2026, 10, 3, 20, 0, tzinfo=UTC)  # a UTC
     assert [f.status for f in fixtures] == [MatchStatus.SCHEDULED, MatchStatus.FINISHED]
+    assert (fixtures[0].home_score, fixtures[0].away_score) == (None, None)
+    assert (fixtures[1].home_score, fixtures[1].away_score) == (2, 1)
 
 
 def test_league_ids():

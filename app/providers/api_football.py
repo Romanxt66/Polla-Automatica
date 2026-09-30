@@ -96,17 +96,23 @@ class ApiFootballProvider:
             raise ProviderError(f"Competición desconocida: {competition_code}")
         season = self._season or default_season(competition_code)
         items = await self._get("/fixtures", {"league": league, "season": season})
-        return [
-            FixtureDTO(
-                external_id=str(item["fixture"]["id"]),
-                competition_code=competition_code,
-                home_team=item["teams"]["home"]["name"],
-                away_team=item["teams"]["away"]["name"],
-                kickoff_at=self._parse_date(item["fixture"]["date"]),
-                status=map_status(item["fixture"]["status"]["short"]),
+        fixtures = []
+        for item in items:
+            status = map_status(item["fixture"]["status"]["short"])
+            home, away = _scores(item, status)
+            fixtures.append(
+                FixtureDTO(
+                    external_id=str(item["fixture"]["id"]),
+                    competition_code=competition_code,
+                    home_team=item["teams"]["home"]["name"],
+                    away_team=item["teams"]["away"]["name"],
+                    kickoff_at=self._parse_date(item["fixture"]["date"]),
+                    status=status,
+                    home_score=home,
+                    away_score=away,
+                )
             )
-            for item in items
-        ]
+        return fixtures
 
     async def get_match_result(self, external_id: str) -> MatchResultDTO:
         items = await self._get("/fixtures", {"id": external_id})

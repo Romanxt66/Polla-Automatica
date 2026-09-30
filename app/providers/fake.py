@@ -76,18 +76,24 @@ class FakeProvider:
     async def get_fixtures(self, competition_code: str) -> list[FixtureDTO]:
         if competition_code not in _TEAMS:
             raise ProviderError(f"Competición desconocida: {competition_code}")
-        return [
-            FixtureDTO(
-                external_id=ext_id,
-                competition_code=code,
-                home_team=home,
-                away_team=away,
-                kickoff_at=kickoff,
-                status=self._status(kickoff),
+        fixtures = []
+        for ext_id, (code, home, away, kickoff) in sorted(self._schedule().items()):
+            if code != competition_code:
+                continue
+            result = await self.get_match_result(ext_id)
+            fixtures.append(
+                FixtureDTO(
+                    external_id=ext_id,
+                    competition_code=code,
+                    home_team=home,
+                    away_team=away,
+                    kickoff_at=kickoff,
+                    status=result.status,
+                    home_score=result.home_score,
+                    away_score=result.away_score,
+                )
             )
-            for ext_id, (code, home, away, kickoff) in sorted(self._schedule().items())
-            if code == competition_code
-        ]
+        return fixtures
 
     async def get_match_result(self, external_id: str) -> MatchResultDTO:
         entry = self._schedule().get(external_id)

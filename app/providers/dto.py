@@ -12,6 +12,8 @@ class FixtureDTO(BaseModel):
     away_team: str
     kickoff_at: datetime
     status: MatchStatus = MatchStatus.SCHEDULED
+    home_score: int | None = None
+    away_score: int | None = None
 
 
 class MatchResultDTO(BaseModel):

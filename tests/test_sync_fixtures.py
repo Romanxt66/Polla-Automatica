@@ -97,3 +97,31 @@ def test_provider_failure_does_not_stop_other_competitions(db):
 def test_match_is_linked_to_its_competition(db):
     run(db, StubProvider({"UCL": [dto("u1", "UCL")]}), ["UCL"])
     assert db.query(Match).one().competition.code == "UCL"
+
+
+def test_finished_fixture_stores_its_score(db):
+    f = dto(status=MatchStatus.FINISHED).model_copy(update={"home_score": 2, "away_score": 1})
+    run(db, StubProvider({"PL": [f]}), ["PL"])
+    m = db.query(Match).one()
+    assert (m.status, m.home_score, m.away_score) == (MatchStatus.FINISHED, 2, 1)
+
+
+def test_finished_fixture_without_score_is_not_closed_so_it_gets_scored_later(db):
+    run(db, StubProvider({"PL": [dto(status=MatchStatus.FINISHED)]}), ["PL"])
+    m = db.query(Match).one()
+    assert m.status == MatchStatus.LIVE  # settle_matches lo consultará y liquidará
+    assert m.home_score is None
+
+
+def test_update_fills_score_when_provider_reports_it(db):
+    run(db, StubProvider({"PL": [dto(status=MatchStatus.LIVE)]}), ["PL"])
+    f = dto(status=MatchStatus.FINISHED).model_copy(update={"home_score": 0, "away_score": 0})
+    run(db, StubProvider({"PL": [f]}), ["PL"])
+    m = db.query(Match).one()
+    assert (m.status, m.home_score, m.away_score) == (MatchStatus.FINISHED, 0, 0)
+
+
+def test_fake_provider_sync_produces_scored_finished_matches(db):
+    run(db, fake())
+    finished = db.query(Match).filter_by(status=MatchStatus.FINISHED).all()
+    assert finished and all(m.home_score is not None for m in finished)

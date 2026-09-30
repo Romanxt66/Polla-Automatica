@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -38,7 +38,11 @@ async def refresh_results(
     now = now or datetime.now(UTC)
     candidates = db.scalars(
         select(Match).where(
-            Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]),
+            or_(
+                Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]),
+                # terminado pero sin marcador todavía: se vuelve a consultar
+                and_(Match.status == MatchStatus.FINISHED, Match.home_score.is_(None)),
+            ),
             Match.kickoff_at <= now,
             Match.kickoff_at > now - window,
         )

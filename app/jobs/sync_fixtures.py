@@ -15,6 +15,14 @@ def _aware(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)  # SQLite devuelve fechas sin zona
 
 
+def _safe_status(f) -> MatchStatus:
+    """Un partido solo se da por FINISHED aquí si el fixture trae el marcador; si no, se
+    deja como estaba de LIVE/SCHEDULED para que settle_matches lo consulte y lo puntúe."""
+    if f.status == MatchStatus.FINISHED and (f.home_score is None or f.away_score is None):
+        return MatchStatus.LIVE
+    return f.status
+
+
 @dataclass
 class SyncReport:
     created: int = 0
@@ -65,7 +73,9 @@ async def sync_fixtures(
                         home_team=f.home_team,
                         away_team=f.away_team,
                         kickoff_at=f.kickoff_at,
-                        status=f.status,
+                        status=_safe_status(f),
+                        home_score=f.home_score,
+                        away_score=f.away_score,
                     )
                 )
                 report.created += 1
@@ -78,9 +88,15 @@ async def sync_fixtures(
             if _aware(match.kickoff_at) != _aware(f.kickoff_at):
                 match.kickoff_at = f.kickoff_at
                 changed = True
-            if match.status != MatchStatus.FINISHED and match.status != f.status:
-                match.status = f.status
-                changed = True
+            if match.status != MatchStatus.FINISHED:
+                new_status = _safe_status(f)
+                if match.status != new_status:
+                    match.status = new_status
+                    changed = True
+                if f.home_score is not None and f.away_score is not None:
+                    if (match.home_score, match.away_score) != (f.home_score, f.away_score):
+                        match.home_score, match.away_score = f.home_score, f.away_score
+                        changed = True
             report.updated += changed
         db.commit()
     return report

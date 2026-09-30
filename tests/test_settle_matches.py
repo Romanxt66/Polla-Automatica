@@ -135,7 +135,9 @@ def test_same_match_in_two_groups_scores_each(db, world):
 def test_no_candidates_means_no_api_calls(db, world):
     add_match(db, world, "future", minutes_ago=-60)  # aún no empieza
     add_match(db, world, "old", minutes_ago=60 * 24)  # fuera de la ventana de 4 h
-    add_match(db, world, "done", status=MatchStatus.FINISHED)
+    done = add_match(db, world, "done", status=MatchStatus.FINISHED)
+    done.home_score, done.away_score = 1, 0  # terminado Y con marcador: no se consulta
+    db.commit()
     provider = StubProvider()
     report = settle(db, provider)
     assert provider.calls == []
@@ -215,3 +217,16 @@ def test_leaderboard_reflects_settlement(db, world):
 
     rows = get_leaderboard(db, world["group"].id)
     assert [(r.username, r.points, r.rank) for r in rows] == [("beto", 5, 1), ("ana", 0, 2)]
+
+
+def test_finished_without_score_is_polled_again_until_score_arrives(db, world):
+    m = add_match(db, world, status=MatchStatus.FINISHED)
+    predict(db, world, 0, m, 2, 1)
+    provider = StubProvider({"m1": finished("m1", 2, 1)})
+    report = settle(db, provider)
+    assert provider.calls == ["m1"]
+    assert report.points_created == 1
+    # ya con marcador, no se vuelve a consultar
+    provider2 = StubProvider({"m1": finished("m1", 2, 1)})
+    settle(db, provider2)
+    assert provider2.calls == []
