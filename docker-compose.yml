@@ -1,0 +1,31 @@
+# La API lee TODA su configuración (incluida la base de datos) del archivo .env.
+#
+#   Servidor Postgres propio/remoto:  docker compose up --build api
+#   Postgres local de desarrollo:     docker compose --profile local-db up --build
+#     (en .env usa POSTGRES_HOST=db y las mismas POSTGRES_USER/PASSWORD/DB)
+services:
+  db:
+    image: postgres:16
+    profiles: ["local-db"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    ports:
+      - "8000:8000"
+    restart: on-failure
+
+volumes:
+  pgdata:
