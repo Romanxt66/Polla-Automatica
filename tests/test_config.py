@@ -112,3 +112,32 @@ def test_explicit_driver_in_url_is_left_alone(monkeypatch):
     assert load().database_url == "postgresql+psycopg://u:p@h/db"
     monkeypatch.setenv("DATABASE_URL", "sqlite:///x.db")
     assert load().database_url == "sqlite:///x.db"
+
+
+def test_schema_defaults_to_polla_futbolera_on_postgres(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@h/db")
+    s = load()
+    assert s.db_schema == "polla_futbolera"
+    assert s.db_connect_args == {"options": "-csearch_path=polla_futbolera"}
+
+
+def test_schema_can_be_changed_or_disabled(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgres://u:p@h/db")
+    monkeypatch.setenv("DATABASE_SCHEMA", "otro")
+    assert load().db_connect_args == {"options": "-csearch_path=otro"}
+    monkeypatch.setenv("DATABASE_SCHEMA", "")  # vacío se ignora -> valor por defecto
+    assert load().db_schema == "polla_futbolera"
+
+
+def test_schema_not_applied_to_sqlite(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///x.db")
+    s = load()
+    assert s.db_schema == "" and s.db_connect_args == {}
+
+
+@pytest.mark.parametrize("bad", ["a;drop table x", 'a"b', "1abc", "con espacio", "a-b"])
+def test_schema_rejects_unsafe_names(monkeypatch, bad):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@h/db")
+    monkeypatch.setenv("DATABASE_SCHEMA", bad)
+    with pytest.raises(ValidationError):
+        load()

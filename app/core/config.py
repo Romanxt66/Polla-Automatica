@@ -1,4 +1,6 @@
-from pydantic import model_validator
+import re
+
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
 
@@ -15,6 +17,9 @@ class Settings(BaseSettings):
     postgres_password: str = ""
     postgres_db: str = ""
     postgres_sslmode: str = ""  # ej. "require" para servidores remotos
+    # Esquema de Postgres donde viven las tablas (se crea si no existe). Para usar el de
+    # siempre pon DATABASE_SCHEMA=public. No aplica a SQLite.
+    database_schema: str = "polla_futbolera"
 
     secret_key: str = "dev-only-secret-key-change-me-in-env-32b"
     access_token_expire_minutes: int = 60
@@ -24,6 +29,25 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = False
     # Orígenes permitidos para el frontend web, separados por coma. Vacío = sin CORS.
     cors_origins: str = ""
+
+    @field_validator("database_schema")
+    @classmethod
+    def schema_is_a_safe_identifier(cls, v: str) -> str:
+        if v and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,62}", v):
+            raise ValueError("DATABASE_SCHEMA solo admite letras, números y _")
+        return v
+
+    @property
+    def db_schema(self) -> str:
+        """Esquema efectivo: solo se usa con Postgres."""
+        is_postgres = self.database_url.startswith("postgresql")
+        return self.database_schema if is_postgres else ""
+
+    @property
+    def db_connect_args(self) -> dict[str, str]:
+        """Fija el search_path de cada conexión al esquema, así las tablas se crean y se
+        consultan ahí sin tener que calificar cada nombre."""
+        return {"options": f"-csearch_path={self.db_schema}"} if self.db_schema else {}
 
     @property
     def cors_origin_list(self) -> list[str]:

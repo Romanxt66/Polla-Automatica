@@ -56,6 +56,10 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --frozen
+      - name: Tablas en el esquema propio (no en public)
+        env:
+          TEST_PG_URL: postgresql+psycopg://polla:polla@localhost:5432/polla
+        run: uv run pytest tests/test_postgres_schema.py -v
       - name: Aplicar migraciones (subir)
         run: uv run alembic upgrade head
       - name: Revertir y volver a aplicar
