@@ -12,5 +12,7 @@ def get_provider() -> ResultsProvider:
     if name == "api_football":
         from app.providers.api_football import ApiFootballProvider
 
-        return ApiFootballProvider(api_key=settings.api_football_key)
+        return ApiFootballProvider(
+            api_key=settings.api_football_key, season=settings.api_football_season
+        )
     raise ProviderError(f"RESULTS_PROVIDER desconocido: {settings.results_provider}")

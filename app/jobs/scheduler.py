@@ -20,10 +20,21 @@ CATCH_UP_WINDOW = timedelta(days=3)
 _scheduler: BackgroundScheduler | None = None
 
 
+async def _with_provider(job, db):
+    """Crea el proveedor, ejecuta el job y cierra el cliente HTTP si lo tiene."""
+    provider = get_provider()
+    try:
+        return await job(db, provider)
+    finally:
+        close = getattr(provider, "aclose", None)
+        if close is not None:
+            await close()
+
+
 def run_sync_fixtures() -> None:
     try:
         with SessionLocal() as db:
-            report = asyncio.run(sync_fixtures(db, get_provider()))
+            report = asyncio.run(_with_provider(sync_fixtures, db))
         logger.info("sync_fixtures: %s", report)
     except Exception:
         logger.exception("sync_fixtures falló")
@@ -33,7 +44,9 @@ def run_settle_matches(window: timedelta = DEFAULT_WINDOW) -> None:
     """Sin partidos dentro de la ventana no hace llamadas a la API (solo liquida en la BD)."""
     try:
         with SessionLocal() as db:
-            report = asyncio.run(settle_matches(db, get_provider(), window=window))
+            report = asyncio.run(
+                _with_provider(lambda d, p: settle_matches(d, p, window=window), db)
+            )
         if report.polled or report.points_created:
             logger.info("settle_matches: %s", report)
     except Exception:
