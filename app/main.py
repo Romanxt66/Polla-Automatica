@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from app.api.router import api_router
 from app.core.config import settings
@@ -42,6 +43,11 @@ if settings.cors_origin_list:
         allow_headers=["*"],
     )
 app.include_router(api_router)
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse("/docs")
 
 
 @app.get("/health", tags=["health"])
