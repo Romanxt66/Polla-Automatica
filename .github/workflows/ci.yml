@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, Nucleo, "feat/**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    name: Lint y tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - name: Ruff
+        run: uv run ruff check .
+      - name: Pytest
+        run: uv run pytest -q
+
+  migrations-postgres:
+    name: Migraciones en Postgres
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: polla
+          POSTGRES_PASSWORD: polla
+          POSTGRES_DB: polla
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U polla"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://polla:polla@localhost:5432/polla
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - name: Aplicar migraciones (subir)
+        run: uv run alembic upgrade head
+      - name: Revertir y volver a aplicar
+        run: |
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+      - name: Las migraciones coinciden con los modelos
+        run: uv run alembic check
