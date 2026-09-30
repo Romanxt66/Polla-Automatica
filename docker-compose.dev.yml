@@ -1,5 +1,6 @@
-# Desarrollo local: API + Postgres propio, leyendo todo de .env
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# Desarrollo local (independiente de docker-compose.yml, que es el de despliegue):
+# API + Postgres propio, leyendo la configuración de .env
+#   docker compose -f docker-compose.dev.yml up --build
 # (en .env: POSTGRES_HOST=db y POSTGRES_USER/PASSWORD/DB a tu gusto)
 services:
   db:
@@ -18,6 +19,8 @@ services:
       retries: 10
 
   api:
+    build: .
+    env_file: .env
     ports:
       - "8000:8000"
     depends_on:

@@ -26,11 +26,12 @@ La conexión sale **solo de variables de entorno** (o de `.env`, que no se sube 
 Si no hay ninguna de las dos, la app no arranca y dice qué variable falta.
 
 Sin servidor propio, API + Postgres locales en Docker:
-`docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build`
+`docker compose -f docker-compose.dev.yml up --build`
 (con `POSTGRES_HOST=db` en `.env`).
 
 ### Despliegue (Coolify)
-`docker-compose.yml` no publica puertos en el host: solo `expose: 8000`. En Coolify asigna
+`docker-compose.yml` no publica puertos en el host: solo `expose: 8000`, y une la API a la red
+`coolify` para que alcance a tu Postgres por nombre de host. En Coolify asigna
 el dominio al servicio `api` con puerto **8000** y define las variables de entorno
 (`DATABASE_URL` o `POSTGRES_*`, `SECRET_KEY`, `CORS_ORIGINS`...). Las variables vacías se ignoran.
 

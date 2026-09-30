@@ -3,7 +3,11 @@
 # En Coolify: servicio `api`, dominio con puerto 8000, y las variables de entorno
 # (DATABASE_URL o POSTGRES_*, SECRET_KEY, ...) en la pestaña Environment Variables.
 #
-# Desarrollo local con Postgres propio en Docker: ver docker-compose.dev.yml
+# La API se une a la red `coolify` (la que comparten los recursos de ese servidor, como tu
+# Postgres) para poder resolver sus nombres de host. Si tu red tiene otro nombre, cámbialo
+# aquí (`docker network ls` en el servidor).
+#
+# Desarrollo local con Postgres propio en Docker: ver docker-compose.dev.yml (independiente).
 services:
   api:
     build: .
@@ -26,3 +30,11 @@ services:
       SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-false}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
     restart: unless-stopped
+    networks:
+      - default
+      - coolify
+
+networks:
+  coolify:
+    name: coolify
+    external: true
