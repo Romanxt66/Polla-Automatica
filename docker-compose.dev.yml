@@ -1,0 +1,28 @@
+# Desarrollo local: API + Postgres propio, leyendo todo de .env
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# (en .env: POSTGRES_HOST=db y POSTGRES_USER/PASSWORD/DB a tu gusto)
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      retries: 10
+
+  api:
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

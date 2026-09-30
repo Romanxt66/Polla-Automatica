@@ -84,3 +84,18 @@ def test_missing_config_fails_fast_and_names_variables(monkeypatch):
 def test_no_hardcoded_credentials_when_nothing_set():
     with pytest.raises(ValidationError):
         load()
+
+
+def test_empty_env_vars_are_treated_as_unset(monkeypatch):
+    # docker-compose pasa "" para las variables sin definir
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("POSTGRES_HOST", "h")
+    monkeypatch.setenv("POSTGRES_USER", "u")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "p")
+    monkeypatch.setenv("POSTGRES_DB", "d")
+    monkeypatch.setenv("POSTGRES_SSLMODE", "")
+    monkeypatch.setenv("API_FOOTBALL_SEASON", "")
+    s = load()
+    assert make_url(s.database_url).host == "h"
+    assert make_url(s.database_url).query == {}
+    assert s.api_football_season is None

@@ -1,31 +1,27 @@
-# La API lee TODA su configuración (incluida la base de datos) del archivo .env.
+# Despliegue (Coolify u otro proxy): la API NO publica puerto en el host, solo lo expone
+# dentro de la red de Docker (el proxy enruta al 8000). Así no choca con otros servicios.
+# En Coolify: servicio `api`, dominio con puerto 8000, y las variables de entorno
+# (DATABASE_URL o POSTGRES_*, SECRET_KEY, ...) en la pestaña Environment Variables.
 #
-#   Servidor Postgres propio/remoto:  docker compose up --build api
-#   Postgres local de desarrollo:     docker compose --profile local-db up --build
-#     (en .env usa POSTGRES_HOST=db y las mismas POSTGRES_USER/PASSWORD/DB)
+# Desarrollo local con Postgres propio en Docker: ver docker-compose.dev.yml
 services:
-  db:
-    image: postgres:16
-    profiles: ["local-db"]
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
-      interval: 5s
-      retries: 10
-
   api:
     build: .
-    env_file: .env
-    ports:
-      - "8000:8000"
-    restart: on-failure
-
-volumes:
-  pgdata:
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-}
+      POSTGRES_HOST: ${POSTGRES_HOST:-}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-}
+      POSTGRES_SSLMODE: ${POSTGRES_SSLMODE:-}
+      SECRET_KEY: ${SECRET_KEY:?Define SECRET_KEY en las variables de entorno}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      RESULTS_PROVIDER: ${RESULTS_PROVIDER:-fake}
+      API_FOOTBALL_KEY: ${API_FOOTBALL_KEY:-}
+      API_FOOTBALL_SEASON: ${API_FOOTBALL_SEASON:-}
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    restart: unless-stopped
