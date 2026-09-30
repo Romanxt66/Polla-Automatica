@@ -99,3 +99,16 @@ def test_empty_env_vars_are_treated_as_unset(monkeypatch):
     assert make_url(s.database_url).host == "h"
     assert make_url(s.database_url).query == {}
     assert s.api_football_season is None
+
+
+@pytest.mark.parametrize("scheme", ["postgres", "postgresql"])
+def test_database_url_scheme_is_normalized_for_psycopg(monkeypatch, scheme):
+    monkeypatch.setenv("DATABASE_URL", f"{scheme}://u:p@host:5432/db?sslmode=require")
+    assert load().database_url == "postgresql+psycopg://u:p@host:5432/db?sslmode=require"
+
+
+def test_explicit_driver_in_url_is_left_alone(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@h/db")
+    assert load().database_url == "postgresql+psycopg://u:p@h/db"
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///x.db")
+    assert load().database_url == "sqlite:///x.db"

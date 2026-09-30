@@ -34,6 +34,11 @@ class Settings(BaseSettings):
         """Si no hay DATABASE_URL, la arma con POSTGRES_*. La contraseña se codifica sola,
         así que puede llevar caracteres como @ : / # sin romper la URL."""
         if self.database_url:
+            # Coolify y otros entregan "postgres://" o "postgresql://"; SQLAlchemy necesita
+            # el driver explícito (psycopg 3).
+            for prefix in ("postgres://", "postgresql://"):
+                if self.database_url.startswith(prefix):
+                    self.database_url = "postgresql+psycopg://" + self.database_url[len(prefix):]
             return self
         required = {
             "POSTGRES_HOST": self.postgres_host,
