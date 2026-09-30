@@ -211,7 +211,7 @@ def test_leaderboard_reflects_settlement(db, world):
     predict(db, world, 0, m, 0, 0)
     predict(db, world, 1, m, 2, 1)
     settle(db, StubProvider({"m1": finished("m1", 2, 1)}))
-    from app.services.group_ranking import get_group_ranking
+    from app.services.leaderboard import get_leaderboard
 
-    rows = get_group_ranking(db, world["group"].id)
+    rows = get_leaderboard(db, world["group"].id)
     assert [(r.username, r.points, r.rank) for r in rows] == [("beto", 5, 1), ("ana", 0, 2)]

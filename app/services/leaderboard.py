@@ -1,18 +1,17 @@
-"""Ranking provisional del grupo, calculado desde PointsLedger.
+"""Ranking de un grupo, calculado desde PointsLedger.
 
 Criterio: más puntos, luego más marcadores exactos, luego username. Los empatados en puntos
-y exactos comparten posición (1, 1, 3). Cuando B fusione `services/leaderboard.py` (B5),
-este módulo se reemplaza por el suyo o se elimina.
+y exactos comparten posición (1, 1, 3). Incluye a todos los miembros, aun con 0 puntos.
 """
 
 from sqlalchemy import Integer, case, func, select
 from sqlalchemy.orm import Session
 
 from app.models import GroupMember, PointsLedger, User
-from app.schemas.ranking import RankingEntry
+from app.schemas.leaderboard import LeaderboardEntry
 
 
-def get_group_ranking(db: Session, group_id: int) -> list[RankingEntry]:
+def get_leaderboard(db: Session, group_id: int) -> list[LeaderboardEntry]:
     points = func.coalesce(func.sum(PointsLedger.points), 0)
     exact = func.coalesce(func.sum(case((PointsLedger.is_exact, 1), else_=0)), 0).cast(Integer)
     rows = db.execute(
@@ -29,11 +28,11 @@ def get_group_ranking(db: Session, group_id: int) -> list[RankingEntry]:
         .order_by(points.desc(), exact.desc(), User.username)
     ).all()
 
-    entries: list[RankingEntry] = []
+    entries: list[LeaderboardEntry] = []
     for i, (user_id, username, pts, hits, scored) in enumerate(rows, start=1):
         tied = entries and (entries[-1].points, entries[-1].exact_hits) == (pts, hits)
         entries.append(
-            RankingEntry(
+            LeaderboardEntry(
                 rank=entries[-1].rank if tied else i,
                 user_id=user_id,
                 username=username,

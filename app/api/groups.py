@@ -7,9 +7,9 @@ from app.api.deps import CurrentUser, DbSession
 from app.models import Competition, Group, GroupMember, Invite
 from app.schemas.group import GroupCreate, GroupDetail, GroupOut, MemberOut
 from app.schemas.invite import InviteCreate, InviteOut, JoinRequest
-from app.schemas.ranking import RankingEntry
+from app.schemas.leaderboard import LeaderboardEntry
 from app.services import invites as invites_service
-from app.services.group_ranking import get_group_ranking
+from app.services.leaderboard import get_leaderboard as compute_leaderboard
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -102,8 +102,8 @@ def create_invite(
     return InviteOut(code=invite.code, group_id=group_id, expires_at=invite.expires_at)
 
 
-@router.get("/{group_id}/leaderboard", response_model=list[RankingEntry])
-def get_leaderboard(group_id: int, db: DbSession, user: CurrentUser) -> list[RankingEntry]:
+@router.get("/{group_id}/leaderboard", response_model=list[LeaderboardEntry])
+def get_leaderboard(group_id: int, db: DbSession, user: CurrentUser) -> list[LeaderboardEntry]:
     is_member = db.scalar(
         select(GroupMember.id).where(
             GroupMember.group_id == group_id, GroupMember.user_id == user.id
@@ -111,4 +111,4 @@ def get_leaderboard(group_id: int, db: DbSession, user: CurrentUser) -> list[Ran
     )
     if is_member is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Grupo no encontrado")
-    return get_group_ranking(db, group_id)
+    return compute_leaderboard(db, group_id)
