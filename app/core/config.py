@@ -4,7 +4,7 @@ from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_ignore_empty=True)
 
     # Base de datos: o bien DATABASE_URL completa, o bien las piezas POSTGRES_*.
     # Sin valores por defecto: las credenciales salen siempre del entorno / .env.
