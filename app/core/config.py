@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     api_football_key: str = ""
     api_football_season: int | None = None  # vacío = se deduce por competición
     scheduler_enabled: bool = False
+    # Orígenes permitidos para el frontend web, separados por coma. Vacío = sin CORS.
+    cors_origins: str = ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
 
     @model_validator(mode="after")
     def build_database_url(self) -> "Settings":
