@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Competition, Match, MatchStatus
-from app.providers.base import ProviderError, ResultsProvider
+from app.providers.base import ProviderError, ResultsProvider, UnsupportedCompetition
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,10 @@ async def sync_fixtures(
             continue
         try:
             fixtures = await provider.get_fixtures(code)
+        except UnsupportedCompetition:
+            logger.info("El proveedor no cubre %s; se omite", code)
+            report.skipped += 1
+            continue
         except ProviderError:
             logger.exception("Fallo al traer fixtures de %s", code)
             report.skipped += 1

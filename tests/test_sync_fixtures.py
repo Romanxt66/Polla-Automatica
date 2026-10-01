@@ -125,3 +125,19 @@ def test_fake_provider_sync_produces_scored_finished_matches(db):
     run(db, fake())
     finished = db.query(Match).filter_by(status=MatchStatus.FINISHED).all()
     assert finished and all(m.home_score is not None for m in finished)
+
+
+def test_unsupported_competition_is_skipped_quietly_without_stopping_others(db, caplog):
+    from app.providers.base import UnsupportedCompetition
+
+    class Partial(StubProvider):
+        async def get_fixtures(self, code):
+            if code == "BETPLAY":
+                raise UnsupportedCompetition("no cubierta")
+            return self.fixtures.get(code, [])
+
+    provider = Partial({"PL": [dto("p1", "PL")], "UCL": [dto("u1", "UCL")]})
+    with caplog.at_level("INFO"):
+        report = run(db, provider, ["BETPLAY", "PL", "UCL"])
+    assert report.created == 2 and report.skipped == 1
+    assert not any(r.exc_info for r in caplog.records)  # sin traceback ni ruido

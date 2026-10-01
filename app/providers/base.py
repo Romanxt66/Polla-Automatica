@@ -21,3 +21,7 @@ class ResultsProvider(Protocol):
 
 class ProviderError(Exception):
     """Fallo al consultar al proveedor de resultados (red, cuota, id desconocido...)."""
+
+
+class UnsupportedCompetition(ProviderError):
+    """El proveedor no cubre esa competición (no es un fallo: se omite sin ruido)."""

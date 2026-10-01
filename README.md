@@ -43,3 +43,16 @@ Docs interactivas: http://localhost:8000/docs
 uv run pytest          # tests (SQLite en memoria)
 uv run ruff check .    # lint
 ```
+
+## Proveedor de resultados
+`RESULTS_PROVIDER` elige la fuente (y `SCHEDULER_ENABLED=true` activa la sincronización):
+
+| Valor | Cubre | Requiere |
+|---|---|---|
+| `fake` | partidos simulados (desarrollo) | nada |
+| `football_data` | Premier y Champions (plan gratis, 10 llamadas/min). **No** Liga BetPlay | `FOOTBALL_DATA_TOKEN` |
+| `api_football` | las tres; el plan gratis solo da temporadas antiguas, la actual requiere pago | `API_FOOTBALL_KEY` |
+
+El calendario se sincroniza al arrancar y cada día a las 04:00 UTC; los resultados se
+consultan cada `SETTLE_INTERVAL_MINUTES` solo mientras hay partidos en juego, en una sola
+llamada para todos.

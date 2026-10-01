@@ -23,8 +23,10 @@ class Settings(BaseSettings):
 
     secret_key: str = "dev-only-secret-key-change-me-in-env-32b"
     access_token_expire_minutes: int = 60
-    results_provider: str = "fake"  # fake | api_football
+    results_provider: str = "fake"  # fake | api_football | football_data
     api_football_key: str = ""
+    football_data_token: str = ""
+    football_data_season: int | None = None  # vacío = temporada en curso
     api_football_season: int | None = None  # vacío = se deduce por competición
     scheduler_enabled: bool = False
     # Cada cuántos minutos se consultan resultados de partidos en juego (cuida la cuota)

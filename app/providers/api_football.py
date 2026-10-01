@@ -5,7 +5,7 @@ from typing import Any
 import httpx
 
 from app.models.match import MatchStatus
-from app.providers.base import ProviderError
+from app.providers.base import ProviderError, UnsupportedCompetition
 from app.providers.dto import FixtureDTO, MatchResultDTO
 
 logger = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ class ApiFootballProvider:
     async def get_fixtures(self, competition_code: str) -> list[FixtureDTO]:
         league = LEAGUE_IDS.get(competition_code)
         if league is None:
-            raise ProviderError(f"Competición desconocida: {competition_code}")
+            raise UnsupportedCompetition(f"Competición desconocida: {competition_code}")
         season = self._season or default_season(competition_code)
         items = await self._get("/fixtures", {"league": league, "season": season})
         fixtures = []
