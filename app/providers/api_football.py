@@ -15,6 +15,9 @@ BASE_URL = "https://v3.football.api-sports.io"
 # código interno -> id de liga en API-Football
 LEAGUE_IDS = {"BETPLAY": 239, "UCL": 2, "PL": 39}
 
+# API-Football admite hasta 20 ids por consulta en /fixtures?ids=1-2-3
+MAX_IDS_PER_REQUEST = 20
+
 _SCHEDULED = {"TBD", "NS"}
 _LIVE = {"1H", "HT", "2H", "ET", "BT", "P", "LIVE", "INT"}
 _FINISHED = {"FT", "AET", "PEN"}
@@ -114,16 +117,33 @@ class ApiFootballProvider:
             )
         return fixtures
 
+    @staticmethod
+    def _to_result(item: dict[str, Any]) -> MatchResultDTO:
+        status = map_status(item["fixture"]["status"]["short"])
+        home, away = _scores(item, status)
+        return MatchResultDTO(
+            external_id=str(item["fixture"]["id"]),
+            status=status,
+            home_score=home,
+            away_score=away,
+        )
+
     async def get_match_result(self, external_id: str) -> MatchResultDTO:
         items = await self._get("/fixtures", {"id": external_id})
         if not items:
             raise ProviderError(f"Partido no encontrado en API-Football: {external_id}")
-        item = items[0]
-        status = map_status(item["fixture"]["status"]["short"])
-        home, away = _scores(item, status)
-        return MatchResultDTO(
-            external_id=external_id, status=status, home_score=home, away_score=away
-        )
+        return self._to_result(items[0])
+
+    async def get_match_results(self, external_ids: list[str]) -> dict[str, MatchResultDTO]:
+        """Una sola llamada por cada 20 partidos (en vez de una por partido)."""
+        results: dict[str, MatchResultDTO] = {}
+        for start in range(0, len(external_ids), MAX_IDS_PER_REQUEST):
+            chunk = external_ids[start : start + MAX_IDS_PER_REQUEST]
+            items = await self._get("/fixtures", {"ids": "-".join(chunk)})
+            for item in items:
+                result = self._to_result(item)
+                results[result.external_id] = result
+        return results
 
     async def aclose(self) -> None:
         await self._client.aclose()

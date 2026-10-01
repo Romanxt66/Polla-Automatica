@@ -85,3 +85,12 @@ def test_unknown_match():
 
 def test_factory_returns_fake_by_default():
     assert isinstance(get_provider(), FakeProvider)
+
+
+def test_batch_matches_single_results_and_skips_unknown():
+    p = provider()
+    ids = ["fake-PL-0", "fake-PL-2", "nope"]
+    batch = run(p.get_match_results(ids))
+    assert set(batch) == {"fake-PL-0", "fake-PL-2"}
+    for ext in ("fake-PL-0", "fake-PL-2"):
+        assert batch[ext] == run(p.get_match_result(ext))

@@ -141,3 +141,14 @@ def test_schema_rejects_unsafe_names(monkeypatch, bad):
     monkeypatch.setenv("DATABASE_SCHEMA", bad)
     with pytest.raises(ValidationError):
         load()
+
+
+def test_settle_interval_default_and_bounds(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "sqlite://")
+    assert load().settle_interval_minutes == 5
+    monkeypatch.setenv("SETTLE_INTERVAL_MINUTES", "10")
+    assert load().settle_interval_minutes == 10
+    for bad in ("0", "61"):
+        monkeypatch.setenv("SETTLE_INTERVAL_MINUTES", bad)
+        with pytest.raises(ValidationError):
+            load()

@@ -1,6 +1,6 @@
 import re
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
 
@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     api_football_key: str = ""
     api_football_season: int | None = None  # vacío = se deduce por competición
     scheduler_enabled: bool = False
+    # Cada cuántos minutos se consultan resultados de partidos en juego (cuida la cuota)
+    settle_interval_minutes: int = Field(default=5, ge=1, le=60)
     # Orígenes permitidos para el frontend web, separados por coma. Vacío = sin CORS.
     cors_origins: str = ""
 

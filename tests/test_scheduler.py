@@ -87,3 +87,9 @@ def test_jobs_swallow_errors(monkeypatch):
     monkeypatch.setattr(sched, "get_provider", boom)
     sched.run_sync_fixtures()  # no debe propagar (no debe matar al scheduler)
     sched.run_settle_matches()
+
+
+def test_settle_interval_comes_from_settings(monkeypatch):
+    monkeypatch.setattr(sched.settings, "settle_interval_minutes", 15)
+    job = {j.id: j for j in sched.build_scheduler().get_jobs()}[sched.SETTLE_JOB_ID]
+    assert job.trigger.interval == timedelta(minutes=15)

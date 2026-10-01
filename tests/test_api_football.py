@@ -164,3 +164,53 @@ def test_factory_builds_api_football(monkeypatch):
     monkeypatch.setattr(settings, "results_provider", "otro")
     with pytest.raises(ProviderError):
         get_provider()
+
+
+def test_batch_uses_one_request_with_hyphenated_ids():
+    seen = []
+
+    def handler(request: httpx.Request):
+        seen.append(dict(request.url.params))
+        return ok([fixture_item(1, "FT", (2, 1), (2, 1)), fixture_item(2, "2H", (0, 0))])
+
+    results = run(make(handler).get_match_results(["1", "2"]))
+    assert seen == [{"ids": "1-2"}]
+    assert set(results) == {"1", "2"}
+    assert results["1"].status == MatchStatus.FINISHED
+    assert (results["1"].home_score, results["1"].away_score) == (2, 1)
+    assert results["2"].status == MatchStatus.LIVE
+
+
+def test_batch_splits_into_groups_of_twenty():
+    seen = []
+
+    def handler(request: httpx.Request):
+        ids = request.url.params["ids"].split("-")
+        seen.append(len(ids))
+        return ok([fixture_item(int(i), "NS") for i in ids])
+
+    ids = [str(i) for i in range(1, 46)]
+    results = run(make(handler).get_match_results(ids))
+    assert seen == [20, 20, 5]
+    assert len(results) == 45
+
+
+def test_batch_with_no_ids_makes_no_request():
+    def handler(request):
+        raise AssertionError("no debería llamar a la API")
+
+    assert run(make(handler).get_match_results([])) == {}
+
+
+def test_batch_missing_ids_are_just_absent():
+    provider = make(lambda r: ok([fixture_item(1, "FT", (1, 0), (1, 0))]))
+    results = run(provider.get_match_results(["1", "2"]))
+    assert set(results) == {"1"}
+
+
+def test_batch_api_error_raises():
+    def handler(request):
+        return httpx.Response(200, json={"errors": {"requests": "limit reached"}, "response": []})
+
+    with pytest.raises(ProviderError):
+        run(make(handler).get_match_results(["1"]))

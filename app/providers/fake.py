@@ -110,3 +110,11 @@ class FakeProvider:
         return MatchResultDTO(
             external_id=external_id, status=status, home_score=home, away_score=away
         )
+
+    async def get_match_results(self, external_ids: list[str]) -> dict[str, MatchResultDTO]:
+        known = self._schedule()
+        return {
+            ext_id: await self.get_match_result(ext_id)
+            for ext_id in external_ids
+            if ext_id in known
+        }

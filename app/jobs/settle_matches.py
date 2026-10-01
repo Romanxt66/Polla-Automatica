@@ -33,7 +33,7 @@ async def refresh_results(
     """Consulta al proveedor los partidos ya iniciados (dentro de `window`) y aún sin cerrar.
 
     Devuelve (consultados, actualizados). Si no hay partidos candidatos no se hace
-    ninguna llamada a la API.
+    ninguna llamada a la API; si los hay, se hace UNA sola consulta para todos.
     """
     now = now or datetime.now(UTC)
     candidates = db.scalars(
@@ -47,12 +47,20 @@ async def refresh_results(
             Match.kickoff_at > now - window,
         )
     ).all()
+    if not candidates:
+        return 0, 0
+    try:
+        # una sola consulta para todos los partidos (cuida la cuota de la API)
+        results = await provider.get_match_results([m.external_id for m in candidates])
+    except ProviderError:
+        logger.exception("Fallo al consultar los resultados de %s partidos", len(candidates))
+        return len(candidates), 0
+
     updated = 0
     for match in candidates:
-        try:
-            result = await provider.get_match_result(match.external_id)
-        except ProviderError:
-            logger.exception("Fallo al consultar el resultado de %s", match.external_id)
+        result = results.get(match.external_id)
+        if result is None:
+            logger.warning("El proveedor no devolvió el partido %s", match.external_id)
             continue
         changed = False
         if result.status != match.status:

@@ -21,21 +21,31 @@ NOW = datetime(2026, 10, 1, 18, 0, tzinfo=UTC)
 
 
 class StubProvider:
-    """Devuelve resultados configurados por external_id y cuenta las llamadas."""
+    """Devuelve resultados configurados por external_id y registra las consultas.
 
-    def __init__(self, results=None, failing=()):
+    `calls` lista los ids pedidos (aplanados) y `batches` cuántas consultas se hicieron.
+    Los ids en `failing` simulan partidos que el proveedor no devuelve.
+    """
+
+    def __init__(self, results=None, failing=(), fail_all=False):
         self.results = results or {}
         self.failing = set(failing)
+        self.fail_all = fail_all
         self.calls: list[str] = []
+        self.batches = 0
 
     async def get_fixtures(self, code):
         raise NotImplementedError
 
     async def get_match_result(self, external_id):
-        self.calls.append(external_id)
-        if external_id in self.failing:
+        raise NotImplementedError
+
+    async def get_match_results(self, external_ids):
+        self.batches += 1
+        self.calls.extend(external_ids)
+        if self.fail_all:
             raise ProviderError("boom")
-        return self.results[external_id]
+        return {i: self.results[i] for i in external_ids if i not in self.failing}
 
 
 def finished(ext, home, away):
@@ -230,3 +240,30 @@ def test_finished_without_score_is_polled_again_until_score_arrives(db, world):
     provider2 = StubProvider({"m1": finished("m1", 2, 1)})
     settle(db, provider2)
     assert provider2.calls == []
+
+
+def test_many_matches_use_a_single_provider_call(db, world):
+    ids = [f"m{i}" for i in range(5)]
+    for ext in ids:
+        add_match(db, world, ext)
+    provider = StubProvider({ext: finished(ext, 1, 0) for ext in ids})
+    report = settle(db, provider)
+    assert provider.batches == 1
+    assert sorted(provider.calls) == ids
+    assert report.polled == 5 and report.results_updated == 5
+
+
+def test_whole_batch_failure_leaves_matches_untouched_and_does_not_raise(db, world):
+    m = add_match(db, world)
+    report = settle(db, StubProvider(fail_all=True))
+    assert (report.results_updated, report.points_created) == (0, 0)
+    assert db.get(Match, m.id).status == MatchStatus.SCHEDULED
+    # en la siguiente vuelta se reintenta y funciona
+    settle(db, StubProvider({"m1": finished("m1", 1, 0)}))
+    assert db.get(Match, m.id).status == MatchStatus.FINISHED
+
+
+def test_no_candidates_makes_zero_batches(db, world):
+    provider = StubProvider()
+    settle(db, provider)
+    assert provider.batches == 0

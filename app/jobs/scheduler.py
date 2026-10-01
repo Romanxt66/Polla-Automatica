@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from app.core.config import settings
 from app.core.db import SessionLocal
 from app.jobs.settle_matches import DEFAULT_WINDOW, settle_matches
 from app.jobs.sync_fixtures import sync_fixtures
@@ -71,7 +72,13 @@ def build_scheduler() -> BackgroundScheduler:
         next_run_time=datetime.now(UTC) + timedelta(seconds=10),
         **common,
     )
-    scheduler.add_job(run_settle_matches, "interval", minutes=5, id=SETTLE_JOB_ID, **common)
+    scheduler.add_job(
+        run_settle_matches,
+        "interval",
+        minutes=settings.settle_interval_minutes,
+        id=SETTLE_JOB_ID,
+        **common,
+    )
     scheduler.add_job(run_settle_catch_up, "cron", hour=5, minute=0, id=CATCH_UP_JOB_ID, **common)
     return scheduler
 
